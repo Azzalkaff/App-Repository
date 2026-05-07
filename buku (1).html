@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Coding Archive</title>
+    
+    <!-- Tailwind CSS untuk Material Styling yang rapi -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts & Material Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+
+    <script>
+        // Konfigurasi Tailwind untuk warna Material Blue
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1a73e8', // Google Blue
+                        primaryHover: '#1557b0',
+                        bgLight: '#f8f9fa',
+                        surface: '#ffffff',
+                    },
+                    fontFamily: {
+                        sans: ['Roboto', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom CSS untuk Transisi Slide & Fade (Material Motion) */
+        body { background-color: #f8f9fa; overflow-x: hidden; }
+        
+        .view-container {
+            position: absolute;
+            width: 100%;
+            top: 64px; /* Tinggi Header */
+            left: 0;
+            padding-bottom: 100px;
+            transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            opacity: 1;
+            transform: translateY(0);
+            visibility: visible;
+        }
+
+        .view-hidden {
+            opacity: 0;
+            transform: translateY(20px);
+            visibility: hidden;
+            pointer-events: none;
+            position: absolute; /* Penting agar tidak memakan ruang saat hidden */
+        }
+
+        /* Styling Scrollbar biar rapi */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Material Card Hover Effect */
+        .material-card {
+            transition: box-shadow 0.3s ease, transform 0.3s ease;
+        }
+        .material-card:hover {
+            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+            transform: translateY(-2px);
+        }
+
+        /* Line clamp untuk deskripsi panjang di kartu */
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        /* Dropzone area */
+        .dropzone-active {
+            border-color: #1a73e8 !important;
+            background-color: #e8f0fe !important;
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased relative min-h-screen">
+
+    <!-- HEADER / APP BAR -->
+    <header class="fixed top-0 left-0 right-0 h-16 bg-surface shadow-sm z-50 flex items-center justify-between px-6 border-b border-gray-200">
+        <div class="flex items-center gap-3">
+            <span class="material-icons-round text-primary text-2xl">code</span>
+            <h1 class="text-xl font-medium tracking-wide">Vibe Coding Archive</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <!-- Backup / Restore Area -->
+            <button onclick="exportData()" title="Export Data Backup" class="text-gray-500 hover:text-primary transition">
+                <span class="material-icons-round">download</span>
+            </button>
+            <label title="Import Data Backup" class="cursor-pointer text-gray-500 hover:text-primary transition flex items-center">
+                <span class="material-icons-round">upload</span>
+                <input type="file" id="import-file" class="hidden" accept=".json" onchange="importData(event)">
+            </label>
+        </div>
+    </header>
+
+    <!-- MAIN WRAPPER -->
+    <main class="max-w-6xl mx-auto relative pt-4 px-4 sm:px-6">
+
+        <!-- 1. HOME / GALLERY VIEW -->
+        <div id="view-home" class="view-container">
+            <!-- Search & Filter Bar -->
+            <div class="bg-surface p-4 rounded-xl shadow-sm border border-gray-100 mb-8 mt-2">
+                <div class="flex flex-col sm:flex-row gap-4 items-center">
+                    <div class="relative w-full sm:w-1/2">
+                        <span class="material-icons-round absolute left-3 top-2.5 text-gray-400">search</span>
+                        <input type="text" id="search-input" placeholder="Cari nama proyek..." 
+                            class="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition">
+                    </div>
+                    <div id="tags-container" class="w-full sm:w-1/2 flex gap-2 overflow-x-auto pb-1 hide-scrollbar whitespace-nowrap">
+                        <!-- Tags will be injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden flex flex-col items-center justify-center py-20 text-center">
+                <span class="material-icons-round text-gray-300 text-6xl mb-4">dashboard_customize</span>
+                <h2 class="text-xl font-medium text-gray-600 mb-2">Belum ada proyek</h2>
+                <p class="text-gray-400">Klik tombol + di sudut kanan bawah untuk menyimpan hasil vibe coding pertamamu.</p>
+            </div>
+
+            <!-- Grid Galeri -->
+            <div id="projects-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Cards will be injected here -->
+            </div>
+
+            <!-- Floating Action Button (FAB) -->
+            <button onclick="switchView('view-form')" class="fixed bottom-8 right-8 w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:bg-primaryHover hover:shadow-xl transition flex items-center justify-center transform hover:scale-105 z-40">
+                <span class="material-icons-round text-3xl">add</span>
+            </button>
+        </div>
+
+        <!-- 2. FORM VIEW (Tambah/Edit) -->
+        <div id="view-form" class="view-container view-hidden max-w-3xl mx-auto pt-2">
+            <button onclick="switchView('view-home')" class="flex items-center text-gray-500 hover:text-primary mb-6 transition font-medium">
+                <span class="material-icons-round mr-1">arrow_back</span> Kembali
+            </button>
+            
+            <div class="bg-surface rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
+                <h2 class="text-2xl font-medium mb-6 text-gray-800 border-b pb-4">Tambah Proyek Baru</h2>
+                
+                <form id="project-form" class="space-y-6">
+                    <input type="hidden" id="form-id">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Input Kiri -->
+                        <div class="space-y-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Judul Proyek *</label>
+                                <input type="text" id="form-title" required class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">URL / Link *</label>
+                                <input type="url" id="form-url" required placeholder="https://" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal *</label>
+                                    <input type="date" id="form-date" required class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Tags (Pisah koma)</label>
+                                    <input type="text" id="form-tags" placeholder="React, Game, AI" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Input Kanan (Gambar) -->
+                        <div class="flex flex-col">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Screenshot Proyek *</label>
+                            <div id="image-dropzone" class="flex-1 min-h-[200px] border-2 border-dashed border-gray-300 rounded-xl bg-gray-50 flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-colors relative overflow-hidden group">
+                                <input type="file" id="form-image-input" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" required>
+                                
+                                <div id="image-placeholder" class="flex flex-col items-center">
+                                    <span class="material-icons-round text-4xl text-gray-400 mb-2 group-hover:text-primary transition">add_photo_alternate</span>
+                                    <p class="text-sm text-gray-500 font-medium">Klik untuk pilih gambar</p>
+                                    <p class="text-xs text-gray-400 mt-1">atau Drag & Drop / Paste (Ctrl+V)</p>
+                                </div>
+                                
+                                <img id="image-preview" src="" class="hidden absolute inset-0 w-full h-full object-cover z-0">
+                                <div id="remove-image-btn" class="hidden absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full z-20 cursor-pointer shadow hover:bg-red-600" onclick="removeImage(event)">
+                                    <span class="material-icons-round text-sm">close</span>
+                                </div>
+                            </div>
+                            <input type="hidden" id="form-image-base64">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Deskripsi Lengkap</label>
+                        <textarea id="form-desc" rows="5" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-y" placeholder="Ceritakan bagaimana kamu membuat ini..."></textarea>
+                    </div>
+
+                    <div class="flex justify-end pt-4 border-t border-gray-100 gap-3">
+                        <button type="button" onclick="switchView('view-home')" class="px-6 py-2.5 rounded-lg font-medium text-gray-600 hover:bg-gray-100 transition">Batal</button>
+                        <button type="submit" class="px-6 py-2.5 rounded-lg font-medium bg-primary text-white hover:bg-primaryHover shadow-md transition flex items-center">
+                            <span class="material-icons-round text-sm mr-2">save</span> Simpan Proyek
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 3. DETAIL VIEW -->
+        <div id="view-detail" class="view-container view-hidden max-w-4xl mx-auto pt-2">
+            <div class="flex justify-between items-center mb-6">
+                <button onclick="switchView('view-home')" class="flex items-center text-gray-500 hover:text-primary transition font-medium">
+                    <span class="material-icons-round mr-1">arrow_back</span> Kembali
+                </button>
+                <button id="btn-delete-project" class="flex items-center text-red-500 hover:text-red-700 transition text-sm font-medium">
+                    <span class="material-icons-round text-sm mr-1">delete</span> Hapus
+                </button>
+            </div>
+
+            <div class="bg-surface rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <!-- Cover Image -->
+                <div class="w-full h-64 sm:h-96 bg-gray-200 relative">
+                    <img id="detail-image" src="" alt="Project Cover" class="w-full h-full object-cover">
+                    <!-- Gradient overlay on bottom -->
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                    <div class="absolute bottom-0 left-0 p-6 sm:p-8 w-full text-white">
+                        <div id="detail-tags" class="flex flex-wrap gap-2 mb-3">
+                            <!-- Tags here -->
+                        </div>
+                        <h2 id="detail-title" class="text-3xl sm:text-4xl font-bold mb-1">Project Title</h2>
+                        <div class="flex items-center text-gray-200 text-sm">
+                            <span class="material-icons-round text-[16px] mr-1">calendar_today</span>
+                            <span id="detail-date">1 Jan 2024</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-6 sm:p-8">
+                    <!-- Action Button -->
+                    <a id="detail-url" href="#" target="_blank" class="inline-flex items-center justify-center w-full sm:w-auto px-8 py-3 mb-8 bg-primary text-white rounded-lg font-medium hover:bg-primaryHover transition shadow-md hover:shadow-lg">
+                        <span class="material-icons-round mr-2">open_in_new</span> Buka Website
+                    </a>
+
+                    <div class="prose max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed" id="detail-desc">
+                        <!-- Description -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- NOTIFICATION TOAST -->
+    <div id="toast" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg transition-all duration-300 opacity-0 pointer-events-none z-50 flex items-center">
+        <span id="toast-icon" class="material-icons-round mr-2 text-sm">info</span>
+        <span id="toast-msg" class="text-sm font-medium">Notifikasi</span>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        /* =========================================
+           1. DATABASE MANAGER (IndexedDB)
+           ========================================= */
+        const DB_NAME = 'VibeCodingDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'projects';
+        let db;
+
+        const initDB = () => {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onupgradeneeded = (e) => {
+                    db = e.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = (e) => {
+                    db = e.target.result;
+                    resolve(db);
+                };
+                request.onerror = (e) => reject('IndexedDB error: ' + e.target.errorCode);
+            });
+        };
+
+        const saveProject = (project) => {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.put(project);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        };
+
+        const getProjects = () => {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const store = tx.objectStore(STORE_NAME);
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result.sort((a,b) => b.createdAt - a.createdAt));
+                request.onerror = () => reject(request.error);
+            });
+        };
+
+        const deleteProjectDB = (id) => {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.delete(id);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        };
+
+        const clearProjectsDB = () => {
+             return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.clear();
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+
+        /* =========================================
+           2. STATE & UI NAVIGATION
+           ========================================= */
+        let currentView = 'view-home';
+        let allProjects = [];
+        let activeTagFilter = 'All';
+        let currentProjectId = null;
+
+        const switchView = (viewId) => {
+            // Hide all
+            ['view-home', 'view-form', 'view-detail'].forEach(id => {
+                const el = document.getElementById(id);
+                if(id !== viewId) {
+                    el.classList.remove('view-container');
+                    el.classList.add('view-hidden');
+                }
+            });
+            // Show target (with small delay to trigger CSS transition)
+            const target = document.getElementById(viewId);
+            target.classList.remove('view-hidden');
+            target.classList.add('view-container');
+            
+            currentView = viewId;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            if(viewId === 'view-home') loadAndRenderProjects();
+            if(viewId === 'view-form' && !currentProjectId) resetForm();
+        };
+
+        const showToast = (msg, icon = 'check_circle', color = 'bg-gray-800') => {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            document.getElementById('toast-icon').innerText = icon;
+            
+            toast.className = `fixed bottom-4 left-1/2 transform -translate-x-1/2 ${color} text-white px-6 py-3 rounded-full shadow-lg transition-all duration-300 z-50 flex items-center opacity-100 translate-y-0`;
+            
+            setTimeout(() => {
+                toast.classList.replace('opacity-100', 'opacity-0');
+                toast.classList.add('translate-y-4');
+            }, 3000);
+        };
+
+
+        /* =========================================
+           3. CORE APPLICATION LOGIC
+           ========================================= */
+        
+        // --- Form & Image Handling ---
+        const dropzone = document.getElementById('image-dropzone');
+        const fileInput = document.getElementById('form-image-input');
+        const imgPreview = document.getElementById('image-preview');
+        const imgPlaceholder = document.getElementById('image-placeholder');
+        const imgBase64 = document.getElementById('form-image-base64');
+        const removeBtn = document.getElementById('remove-image-btn');
+
+        const processImageFile = (file) => {
+            if (!file || !file.type.startsWith('image/')) {
+                showToast('Hanya file gambar yang diperbolehkan!', 'error', 'bg-red-500');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imgBase64.value = e.target.result;
+                imgPreview.src = e.target.result;
+                imgPreview.classList.remove('hidden');
+                imgPlaceholder.classList.add('hidden');
+                removeBtn.classList.remove('hidden');
+                fileInput.removeAttribute('required'); // hapus req jika sdh ada
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.removeImage = (e) => {
+            e.stopPropagation(); // Mencegah klik file input
+            e.preventDefault();
+            imgBase64.value = '';
+            imgPreview.src = '';
+            imgPreview.classList.add('hidden');
+            imgPlaceholder.classList.remove('hidden');
+            removeBtn.classList.add('hidden');
+            fileInput.value = '';
+            fileInput.setAttribute('required', 'true');
+        };
+
+        // File Input Change
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) processImageFile(e.target.files[0]);
+        });
+
+        // Drag & Drop
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('dropzone-active');
+        });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dropzone-active'));
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dropzone-active');
+            if (e.dataTransfer.files.length > 0) processImageFile(e.dataTransfer.files[0]);
+        });
+
+        // Paste Image (Ctrl+V)
+        document.addEventListener('paste', (e) => {
+            if (currentView !== 'view-form') return;
+            const items = (e.clipboardData || window.clipboardData).items;
+            for (let index in items) {
+                const item = items[index];
+                if (item.kind === 'file' && item.type.startsWith('image/')) {
+                    processImageFile(item.getAsFile());
+                }
+            }
+        });
+
+        // Form Submit
+        document.getElementById('project-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if(!imgBase64.value) {
+                showToast('Harap masukkan gambar/screenshot!', 'warning', 'bg-orange-500');
+                return;
+            }
+
+            const rawTags = document.getElementById('form-tags').value;
+            const tagArray = rawTags ? rawTags.split(',').map(t => t.trim()).filter(t => t !== '') : [];
+
+            const project = {
+                id: document.getElementById('form-id').value || crypto.randomUUID(),
+                title: document.getElementById('form-title').value,
+                url: document.getElementById('form-url').value,
+                date: document.getElementById('form-date').value,
+                tags: tagArray,
+                image: imgBase64.value,
+                desc: document.getElementById('form-desc').value,
+                createdAt: document.getElementById('form-id').value ? allProjects.find(p => p.id === document.getElementById('form-id').value).createdAt : Date.now()
+            };
+
+            await saveProject(project);
+            showToast('Proyek berhasil disimpan!');
+            resetForm();
+            switchView('view-home');
+        });
+
+        const resetForm = () => {
+            document.getElementById('project-form').reset();
+            document.getElementById('form-id').value = '';
+            currentProjectId = null;
+            document.getElementById('form-date').valueAsDate = new Date(); // default hari ini
+            removeImage(new Event('click')); // bersihkan gambar
+        };
+
+
+        // --- Rendering Home (Galeri) ---
+        const renderTagsFilter = () => {
+            const container = document.getElementById('tags-container');
+            const allTags = new Set(['All']);
+            allProjects.forEach(p => p.tags.forEach(t => allTags.add(t)));
+
+            container.innerHTML = Array.from(allTags).map(tag => {
+                const isActive = tag === activeTagFilter;
+                const baseClass = "px-4 py-1.5 rounded-full text-sm font-medium border cursor-pointer transition whitespace-nowrap";
+                const colorClass = isActive 
+                    ? "bg-primary text-white border-primary shadow-sm" 
+                    : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50";
+                return `<div onclick="setFilter('${tag}')" class="${baseClass} ${colorClass}">${tag}</div>`;
+            }).join('');
+        };
+
+        window.setFilter = (tag) => {
+            activeTagFilter = tag;
+            renderProjects();
+            renderTagsFilter();
+        };
+
+        document.getElementById('search-input').addEventListener('input', () => renderProjects());
+
+        const renderProjects = () => {
+            const container = document.getElementById('projects-grid');
+            const emptyState = document.getElementById('empty-state');
+            const searchQuery = document.getElementById('search-input').value.toLowerCase();
+
+            const filtered = allProjects.filter(p => {
+                const matchSearch = p.title.toLowerCase().includes(searchQuery) || p.desc.toLowerCase().includes(searchQuery);
+                const matchTag = activeTagFilter === 'All' || p.tags.includes(activeTagFilter);
+                return matchSearch && matchTag;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            container.innerHTML = filtered.map(p => {
+                // Formatting Date
+                const dateObj = new Date(p.date);
+                const dateStr = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+                
+                // Tags HTML
+                const tagsHtml = p.tags.slice(0, 3).map(t => `<span class="bg-blue-50 text-primary px-2 py-1 rounded text-xs font-medium">${t}</span>`).join('');
+                const moreTags = p.tags.length > 3 ? `<span class="text-xs text-gray-400">+${p.tags.length-3}</span>` : '';
+
+                return `
+                <div onclick="openDetail('${p.id}')" class="material-card bg-surface rounded-xl overflow-hidden border border-gray-200 cursor-pointer flex flex-col h-full">
+                    <div class="h-48 w-full bg-gray-100 relative overflow-hidden">
+                        <img src="${p.image}" alt="${p.title}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="p-5 flex flex-col flex-grow">
+                        <div class="flex gap-1.5 flex-wrap mb-3 items-center">
+                            ${tagsHtml} ${moreTags}
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-800 mb-1 leading-tight">${p.title}</h3>
+                        <div class="text-xs text-gray-500 mb-3 flex items-center">
+                            <span class="material-icons-round text-[14px] mr-1">calendar_today</span> ${dateStr}
+                        </div>
+                        <p class="text-sm text-gray-600 line-clamp-3 mb-4 flex-grow">${p.desc || 'Tidak ada deskripsi.'}</p>
+                        <div class="mt-auto pt-3 border-t border-gray-100 flex items-center text-primary text-sm font-medium">
+                            <span class="material-icons-round text-[18px] mr-1">visibility</span> Lihat Detail
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        };
+
+        const loadAndRenderProjects = async () => {
+            allProjects = await getProjects();
+            renderTagsFilter();
+            renderProjects();
+        };
+
+        // --- Detail View ---
+        window.openDetail = (id) => {
+            const p = allProjects.find(x => x.id === id);
+            if(!p) return;
+            
+            currentProjectId = p.id;
+            
+            document.getElementById('detail-image').src = p.image;
+            document.getElementById('detail-title').innerText = p.title;
+            
+            const dateObj = new Date(p.date);
+            document.getElementById('detail-date').innerText = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            
+            document.getElementById('detail-desc').innerText = p.desc || 'Tidak ada deskripsi disediakan.';
+            
+            const urlBtn = document.getElementById('detail-url');
+            urlBtn.href = p.url;
+            
+            document.getElementById('detail-tags').innerHTML = p.tags.map(t => 
+                `<span class="px-3 py-1 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full text-xs font-medium shadow-sm">${t}</span>`
+            ).join('');
+
+            // Delete action bindings
+            const delBtn = document.getElementById('btn-delete-project');
+            delBtn.onclick = () => confirmDelete(p.id);
+
+            switchView('view-detail');
+        };
+
+        const confirmDelete = async (id) => {
+            if(confirm('Apakah Anda yakin ingin menghapus proyek ini secara permanen?')) {
+                await deleteProjectDB(id);
+                showToast('Proyek dihapus');
+                currentProjectId = null;
+                switchView('view-home');
+            }
+        };
+
+        // --- Backup & Restore (JSON) ---
+        window.exportData = async () => {
+            const data = await getProjects();
+            if(data.length === 0) {
+                showToast('Tidak ada data untuk di-export', 'info');
+                return;
+            }
+            const dataStr = JSON.stringify(data);
+            const blob = new Blob([dataStr], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `VibeCoding_Backup_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Data berhasil di-export!');
+        };
+
+        window.importData = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if(!Array.isArray(importedData)) throw new Error("Format tidak valid");
+                    
+                    if(confirm(`Ditemukan ${importedData.length} proyek. Hapus data lama dan timpa dengan data ini?`)){
+                        await clearProjectsDB();
+                        for (const proj of importedData) {
+                            await saveProject(proj);
+                        }
+                        showToast('Data berhasil di-restore!');
+                        loadAndRenderProjects();
+                    }
+                } catch (err) {
+                    showToast('Gagal memuat file JSON yang valid!', 'error', 'bg-red-500');
+                    console.error(err);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // reset input
+        };
+
+        /* =========================================
+           4. INITIALIZATION
+           ========================================= */
+        window.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('form-date').valueAsDate = new Date();
+            await initDB();
+            await loadAndRenderProjects();
+        });
+
+    </script>
+</body>
+</html>
