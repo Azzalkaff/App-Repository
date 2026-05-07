@@ -10,26 +10,40 @@
     
     <!-- Google Fonts & Material Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 
     <script>
-        // Konfigurasi Tailwind untuk warna Material Blue
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        primary: '#1a73e8', // Google Blue
+                        primary: '#1a73e8',
                         primaryHover: '#1557b0',
                         bgLight: '#f8f9fa',
                         surface: '#ffffff',
+                        darkSurface: '#1e1e1e',
+                        darkBg: '#121212',
                     },
-                    fontFamily: {
-                        sans: ['Roboto', 'sans-serif'],
-                    }
+                    fontFamily: { sans: ['Roboto', 'sans-serif'] }
                 }
             }
         }
     </script>
+    <style>
+        /* Smooth Transition & Dark Mode Overrides */
+        body { transition: background-color 0.3s ease; }
+        .dark body { background-color: #121212; color: #e5e7eb; }
+        .dark .bg-surface { background-color: #1e1e1e; color: #e5e7eb; border-color: #333; }
+        .dark .text-gray-800 { color: #f3f4f6; }
+        .dark .text-gray-700, .dark .text-gray-600 { color: #d1d5db; }
+        .dark .bg-gray-50, .dark .bg-surface input, .dark .bg-surface textarea, .dark .bg-surface select { 
+            background-color: #2d2d2d; border-color: #444; color: #fff; 
+        }
+        .dark .border-gray-100, .dark .border-gray-200 { border-color: #333; }
+        .dark .material-card { background-color: #1e1e1e; border-color: #333; }
+        .dark .prose pre { background-color: #2d2d2d; border: 1px solid #444; }
 
     <style>
         /* Custom CSS untuk Transisi Slide & Fade (Material Motion) */
@@ -94,6 +108,9 @@
             <h1 class="text-xl font-medium tracking-wide">Vibe Coding Archive</h1>
         </div>
         <div class="flex items-center gap-4">
+            <button onclick="toggleDarkMode()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400">
+                <span id="dark-mode-icon" class="material-icons-round">dark_mode</span>
+            </button>
             <!-- Backup / Restore Area -->
             <button onclick="exportData()" title="Export Data Backup" class="text-gray-500 hover:text-primary transition">
                 <span class="material-icons-round">download</span>
@@ -161,9 +178,15 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Judul Proyek *</label>
                                 <input type="text" id="form-title" required class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">URL / Link *</label>
-                                <input type="url" id="form-url" required placeholder="https://" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Live Demo URL</label>
+                                    <input type="url" id="form-demo-url" placeholder="https://demo.com" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Repository URL</label>
+                                    <input type="url" id="form-repo-url" placeholder="https://github.com/..." class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                                </div>
                             </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
@@ -171,30 +194,36 @@
                                     <input type="date" id="form-date" required class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Tags (Pisah koma)</label>
-                                    <input type="text" id="form-tags" placeholder="React, Game, AI" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Status Proyek</label>
+                                    <select id="form-status" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                                        <option value="In Progress">In Progress</option>
+                                        <option value="Completed">Completed</option>
+                                        <option value="Abandoned">Abandoned</option>
+                                    </select>
                                 </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Tags (Pisah koma)</label>
+                                <input type="text" id="form-tags" placeholder="React, Game, AI" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
                             </div>
                         </div>
 
                         <!-- Input Kanan (Gambar) -->
                         <div class="flex flex-col">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Screenshot Proyek *</label>
-                            <div id="image-dropzone" class="flex-1 min-h-[200px] border-2 border-dashed border-gray-300 rounded-xl bg-gray-50 flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-colors relative overflow-hidden group">
-                                <input type="file" id="form-image-input" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" required>
+                            <div id="image-dropzone" class="flex-1 min-h-[200px] border-2 border-dashed border-gray-300 rounded-xl bg-gray-50 flex flex-col items-center justify-center p-4 text-center cursor-pointer transition-colors relative group">
+                                <input type="file" id="form-image-input" accept="image/*" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
                                 
                                 <div id="image-placeholder" class="flex flex-col items-center">
                                     <span class="material-icons-round text-4xl text-gray-400 mb-2 group-hover:text-primary transition">add_photo_alternate</span>
-                                    <p class="text-sm text-gray-500 font-medium">Klik untuk pilih gambar</p>
-                                    <p class="text-xs text-gray-400 mt-1">atau Drag & Drop / Paste (Ctrl+V)</p>
+                                    <p class="text-sm text-gray-500 font-medium">Tambah Screenshot</p>
+                                    <p class="text-xs text-gray-400 mt-1">Bisa pilih banyak</p>
                                 </div>
                                 
-                                <img id="image-preview" src="" class="hidden absolute inset-0 w-full h-full object-cover z-0">
-                                <div id="remove-image-btn" class="hidden absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full z-20 cursor-pointer shadow hover:bg-red-600" onclick="removeImage(event)">
-                                    <span class="material-icons-round text-sm">close</span>
-                                </div>
+                                <div id="image-preview-container" class="hidden grid grid-cols-3 gap-2 w-full h-full overflow-y-auto p-2">
+                                    </div>
                             </div>
-                            <input type="hidden" id="form-image-base64">
+                            <div id="image-count-badge" class="text-[10px] font-bold mt-1 text-gray-400">0 Gambar terpilih</div>
                         </div>
                     </div>
 
@@ -219,34 +248,43 @@
                 <button onclick="switchView('view-home')" class="flex items-center text-gray-500 hover:text-primary transition font-medium">
                     <span class="material-icons-round mr-1">arrow_back</span> Kembali
                 </button>
-                <button id="btn-delete-project" class="flex items-center text-red-500 hover:text-red-700 transition text-sm font-medium">
-                    <span class="material-icons-round text-sm mr-1">delete</span> Hapus
-                </button>
+                <div class="flex gap-4">
+                    <button id="btn-edit-project" class="flex items-center text-primary hover:text-primaryHover transition text-sm font-medium">
+                        <span class="material-icons-round text-sm mr-1">edit</span> Edit
+                    </button>
+                    <button id="btn-delete-project" class="flex items-center text-red-500 hover:text-red-700 transition text-sm font-medium">
+                        <span class="material-icons-round text-sm mr-1">delete</span> Hapus
+                    </button>
+                </div>
             </div>
 
             <div class="bg-surface rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <!-- Cover Image -->
-                <div class="w-full h-64 sm:h-96 bg-gray-200 relative">
-                    <img id="detail-image" src="" alt="Project Cover" class="w-full h-full object-cover">
-                    <!-- Gradient overlay on bottom -->
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                    <div class="absolute bottom-0 left-0 p-6 sm:p-8 w-full text-white">
-                        <div id="detail-tags" class="flex flex-wrap gap-2 mb-3">
-                            <!-- Tags here -->
+<div class="w-full relative bg-gray-900 group">
+                    <div id="detail-carousel" class="flex overflow-x-auto snap-x snap-mandatory scroll-smooth hide-scrollbar h-64 sm:h-96">
+                        </div>
+                    
+                    <div class="absolute bottom-0 left-0 p-6 sm:p-8 w-full bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white pointer-events-none">
+                        <div class="flex flex-wrap gap-2 mb-3 items-center pointer-events-auto">
+                            <span id="detail-status-badge" class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider bg-primary text-white">Status</span>
+                            <div id="detail-tags" class="flex flex-wrap gap-2"></div>
                         </div>
                         <h2 id="detail-title" class="text-3xl sm:text-4xl font-bold mb-1">Project Title</h2>
-                        <div class="flex items-center text-gray-200 text-sm">
+                        <div class="flex items-center text-gray-300 text-sm">
                             <span class="material-icons-round text-[16px] mr-1">calendar_today</span>
                             <span id="detail-date">1 Jan 2024</span>
                         </div>
                     </div>
                 </div>
-
-                <div class="p-6 sm:p-8">
-                    <!-- Action Button -->
-                    <a id="detail-url" href="#" target="_blank" class="inline-flex items-center justify-center w-full sm:w-auto px-8 py-3 mb-8 bg-primary text-white rounded-lg font-medium hover:bg-primaryHover transition shadow-md hover:shadow-lg">
-                        <span class="material-icons-round mr-2">open_in_new</span> Buka Website
-                    </a>
+<div class="p-6 sm:p-8">
+                    <div class="flex flex-col sm:flex-row gap-3 mb-8">
+                        <a id="btn-demo" href="#" target="_blank" class="hidden items-center justify-center px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primaryHover transition shadow-md">
+                            <span class="material-icons-round mr-2">rocket_launch</span> Live Demo
+                        </a>
+                        <a id="btn-repo" href="#" target="_blank" class="hidden items-center justify-center px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-white rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition border border-gray-200 dark:border-gray-700">
+                            <span class="material-icons-round mr-2">terminal</span> Repository
+                        </a>
+                    </div>
 
                     <div class="prose max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed" id="detail-desc">
                         <!-- Description -->
@@ -386,21 +424,74 @@
         const imgBase64 = document.getElementById('form-image-base64');
         const removeBtn = document.getElementById('remove-image-btn');
 
+        let uploadedImages = []; // Local state for images in form
+
         const processImageFile = (file) => {
-            if (!file || !file.type.startsWith('image/')) {
-                showToast('Hanya file gambar yang diperbolehkan!', 'error', 'bg-red-500');
-                return;
-            }
+            if (!file || !file.type.startsWith('image/')) return;
+            
             const reader = new FileReader();
             reader.onload = (e) => {
-                imgBase64.value = e.target.result;
-                imgPreview.src = e.target.result;
-                imgPreview.classList.remove('hidden');
-                imgPlaceholder.classList.add('hidden');
-                removeBtn.classList.remove('hidden');
-                fileInput.removeAttribute('required'); // hapus req jika sdh ada
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    // Maksimal dimensi 1280px (HD) untuk keseimbangan kualitas/ukuran
+                    const maxDim = 1280;
+                    if (width > maxDim || height > maxDim) {
+                        if (width > height) {
+                            height *= maxDim / width;
+                            width = maxDim;
+                        } else {
+                            width *= maxDim / height;
+                            height = maxDim;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Kompresi ke WebP (atau JPEG jika tidak support) dengan kualitas 0.7
+                    const compressedBase64 = canvas.toDataURL('image/webp', 0.7);
+                    uploadedImages.push(compressedBase64);
+                    updateImagePreviewUI();
+                };
+                img.src = e.target.result;
             };
             reader.readAsDataURL(file);
+        };
+
+        const updateImagePreviewUI = () => {
+            const container = document.getElementById('image-preview-container');
+            const placeholder = document.getElementById('image-placeholder');
+            const badge = document.getElementById('image-count-badge');
+            
+            if (uploadedImages.length > 0) {
+                container.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                container.innerHTML = uploadedImages.map((img, idx) => `
+                    <div class="relative group h-24">
+                        <img src="${img}" class="w-full h-full object-cover rounded-md border border-gray-200">
+                        <div onclick="removeImageAt(event, ${idx})" class="absolute top-1 right-1 bg-red-500 text-white p-0.5 rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition">
+                            <span class="material-icons-round text-xs">close</span>
+                        </div>
+                    </div>
+                `).join('');
+                badge.innerText = `${uploadedImages.length} Gambar terpilih`;
+            } else {
+                container.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+                badge.innerText = `0 Gambar terpilih`;
+            }
+        };
+
+        window.removeImageAt = (e, index) => {
+            e.stopPropagation();
+            uploadedImages.splice(index, 1);
+            updateImagePreviewUI();
         };
 
         window.removeImage = (e) => {
@@ -459,10 +550,13 @@
             const project = {
                 id: document.getElementById('form-id').value || crypto.randomUUID(),
                 title: document.getElementById('form-title').value,
-                url: document.getElementById('form-url').value,
+                demoUrl: document.getElementById('form-demo-url').value,
+                repoUrl: document.getElementById('form-repo-url').value,
                 date: document.getElementById('form-date').value,
+                status: document.getElementById('form-status').value,
                 tags: tagArray,
-                image: imgBase64.value,
+                images: uploadedImages, // Simpan array gambar
+                image: uploadedImages[0] || '', // Fallback untuk thumbnail lama
                 desc: document.getElementById('form-desc').value,
                 createdAt: document.getElementById('form-id').value ? allProjects.find(p => p.id === document.getElementById('form-id').value).createdAt : Date.now()
             };
@@ -477,8 +571,31 @@
             document.getElementById('project-form').reset();
             document.getElementById('form-id').value = '';
             currentProjectId = null;
-            document.getElementById('form-date').valueAsDate = new Date(); // default hari ini
-            removeImage(new Event('click')); // bersihkan gambar
+            uploadedImages = []; // Reset array gambar lokal
+            document.getElementById('form-date').valueAsDate = new Date();
+            updateImagePreviewUI();
+        };
+
+        window.openEdit = (id) => {
+            const p = allProjects.find(x => x.id === id);
+            if (!p) return;
+
+            currentProjectId = p.id;
+            document.getElementById('form-id').value = p.id;
+            document.getElementById('form-title').value = p.title;
+            document.getElementById('form-demo-url').value = p.demoUrl || '';
+            document.getElementById('form-repo-url').value = p.repoUrl || '';
+            document.getElementById('form-date').value = p.date;
+            document.getElementById('form-status').value = p.status || 'In Progress';
+            document.getElementById('form-tags').value = p.tags.join(', ');
+            document.getElementById('form-desc').value = p.desc || '';
+            
+            // Muat gambar lama ke state edit
+            uploadedImages = p.images && p.images.length > 0 ? [...p.images] : (p.image ? [p.image] : []);
+            updateImagePreviewUI();
+
+            switchView('view-form');
+            document.querySelector('#view-form h2').innerText = 'Edit Proyek';
         };
 
 
@@ -566,27 +683,49 @@
         window.openDetail = (id) => {
             const p = allProjects.find(x => x.id === id);
             if(!p) return;
-            
             currentProjectId = p.id;
+
+            // Carousel Rendering
+            const carousel = document.getElementById('detail-carousel');
+            const imagesToRender = p.images && p.images.length > 0 ? p.images : [p.image];
+            carousel.innerHTML = imagesToRender.map(img => `
+                <img src="${img}" class="w-full h-full object-cover flex-shrink-0 snap-center">
+            `).join('');
             
-            document.getElementById('detail-image').src = p.image;
+            // Status Badge Logic
+            const statusBadge = document.getElementById('detail-status-badge');
+            statusBadge.innerText = p.status || 'Completed';
+            const statusColors = {
+                'In Progress': 'bg-blue-500',
+                'Completed': 'bg-green-500',
+                'Abandoned': 'bg-gray-500'
+            };
+            statusBadge.className = `px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider text-white ${statusColors[p.status] || 'bg-primary'}`;
+
             document.getElementById('detail-title').innerText = p.title;
-            
             const dateObj = new Date(p.date);
             document.getElementById('detail-date').innerText = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
             
-            document.getElementById('detail-desc').innerText = p.desc || 'Tidak ada deskripsi disediakan.';
+            // Markdown Rendering
+            document.getElementById('detail-desc').innerHTML = marked.parse(p.desc || '_Tidak ada deskripsi disediakan._');
             
-            const urlBtn = document.getElementById('detail-url');
-            urlBtn.href = p.url;
+            // Link Handling
+            const btnDemo = document.getElementById('btn-demo');
+            const btnRepo = document.getElementById('btn-repo');
+            
+            if(p.demoUrl) { btnDemo.href = p.demoUrl; btnDemo.classList.replace('hidden', 'flex'); }
+            else { btnDemo.classList.replace('flex', 'hidden'); }
+            
+            if(p.repoUrl) { btnRepo.href = p.repoUrl; btnRepo.classList.replace('hidden', 'flex'); }
+            else { btnRepo.classList.replace('flex', 'hidden'); }
             
             document.getElementById('detail-tags').innerHTML = p.tags.map(t => 
-                `<span class="px-3 py-1 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full text-xs font-medium shadow-sm">${t}</span>`
+                `<span class="px-3 py-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-xs font-medium shadow-sm">${t}</span>`
             ).join('');
 
-            // Delete action bindings
-            const delBtn = document.getElementById('btn-delete-project');
-            delBtn.onclick = () => confirmDelete(p.id);
+            // Action bindings
+            document.getElementById('btn-delete-project').onclick = () => confirmDelete(p.id);
+            document.getElementById('btn-edit-project').onclick = () => openEdit(p.id);
 
             switchView('view-detail');
         };
@@ -649,9 +788,21 @@
         };
 
         /* =========================================
-           4. INITIALIZATION
+           4. DARK MODE & INITIALIZATION
            ========================================= */
+        const toggleDarkMode = () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('darkMode', isDark ? 'enabled' : 'disabled');
+            document.getElementById('dark-mode-icon').innerText = isDark ? 'light_mode' : 'dark_mode';
+        };
+
         window.addEventListener('DOMContentLoaded', async () => {
+            // Apply saved dark mode
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                document.documentElement.classList.add('dark');
+                document.getElementById('dark-mode-icon').innerText = 'light_mode';
+            }
+            
             document.getElementById('form-date').valueAsDate = new Date();
             await initDB();
             await loadAndRenderProjects();
