@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vibe Coding Archive</title>
+    <title>Azzalkaff Repository</title>
     
     <!-- Tailwind CSS untuk Material Styling yang rapi -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Google Fonts & Material Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 
@@ -26,7 +26,10 @@
                         darkSurface: '#1e1e1e',
                         darkBg: '#121212',
                     },
-                    fontFamily: { sans: ['Roboto', 'sans-serif'] }
+                    fontFamily: { 
+                        serif: ['Libre Baskerville', 'serif'],
+                        sans: ['Libre Baskerville', 'serif'] 
+                    }
                 }
             }
         }
@@ -98,13 +101,13 @@
         }
     </style>
 </head>
-<body class="text-gray-800 antialiased relative min-h-screen">
+<body class="text-gray-800 antialiased relative min-h-screen font-serif">
 
     <!-- HEADER / APP BAR -->
     <header class="fixed top-0 left-0 right-0 h-16 bg-surface shadow-sm z-50 flex items-center justify-between px-6 border-b border-gray-200">
         <div class="flex items-center gap-3">
             <span class="material-icons-round text-primary text-2xl">code</span>
-            <h1 class="text-xl font-medium tracking-wide">Vibe Coding Archive</h1>
+            <h1 class="text-xl font-medium tracking-wide">Azzalkaff Repository</h1>
         </div>
         <div class="flex items-center gap-4">
             <button onclick="toggleDarkMode()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400">
