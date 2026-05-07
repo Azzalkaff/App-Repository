@@ -45,7 +45,6 @@
         .dark .material-card { background-color: #1e1e1e; border-color: #333; }
         .dark .prose pre { background-color: #2d2d2d; border: 1px solid #444; }
 
-    <style>
         /* Custom CSS untuk Transisi Slide & Fade (Material Motion) */
         body { background-color: #f8f9fa; overflow-x: hidden; }
         
@@ -435,42 +434,41 @@
 
         let uploadedImages = []; // Local state for images in form
 
-        const processImageFile = (file) => {
-            if (!file || !file.type.startsWith('image/')) return;
-            
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
+        const processImageFile = (files) => {
+            Array.from(files).forEach(file => {
+                if (!file || !file.type.startsWith('image/')) return;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        const maxDim = 1200; // Optimasi ukuran agar IndexedDB tidak penuh
 
-                    // Maksimal dimensi 1280px (HD) untuk keseimbangan kualitas/ukuran
-                    const maxDim = 1280;
-                    if (width > maxDim || height > maxDim) {
-                        if (width > height) {
-                            height *= maxDim / width;
-                            width = maxDim;
-                        } else {
-                            width *= maxDim / height;
-                            height = maxDim;
+                        if (width > maxDim || height > maxDim) {
+                            if (width > height) {
+                                height *= maxDim / width;
+                                width = maxDim;
+                            } else {
+                                width *= maxDim / height;
+                                height = maxDim;
+                            }
                         }
-                    }
 
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
 
-                    // Kompresi ke WebP (atau JPEG jika tidak support) dengan kualitas 0.7
-                    const compressedBase64 = canvas.toDataURL('image/webp', 0.7);
-                    uploadedImages.push(compressedBase64);
-                    updateImagePreviewUI();
+                        uploadedImages.push(canvas.toDataURL('image/webp', 0.7));
+                        updateImagePreviewUI();
+                    };
+                    img.src = e.target.result;
                 };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
+                reader.readAsDataURL(file);
+            });
         };
 
         const updateImagePreviewUI = () => {
@@ -517,7 +515,7 @@
 
         // File Input Change
         fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) processImageFile(e.target.files[0]);
+            if (e.target.files.length > 0) processImageFile(e.target.files);
         });
 
         // Drag & Drop
@@ -529,7 +527,7 @@
         dropzone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropzone.classList.remove('dropzone-active');
-            if (e.dataTransfer.files.length > 0) processImageFile(e.dataTransfer.files[0]);
+            if (e.dataTransfer.files.length > 0) processImageFile(e.dataTransfer.files);
         });
 
         // Paste Image (Ctrl+V)
@@ -539,7 +537,7 @@
             for (let index in items) {
                 const item = items[index];
                 if (item.kind === 'file' && item.type.startsWith('image/')) {
-                    processImageFile(item.getAsFile());
+                    processImageFile([item.getAsFile()]);
                 }
             }
         });
@@ -548,7 +546,7 @@
         document.getElementById('project-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            if(!imgBase64.value) {
+            if(uploadedImages.length === 0) {
                 showToast('Harap masukkan gambar/screenshot!', 'warning', 'bg-orange-500');
                 return;
             }
@@ -580,8 +578,9 @@
             document.getElementById('project-form').reset();
             document.getElementById('form-id').value = '';
             currentProjectId = null;
-            uploadedImages = []; // Reset array gambar lokal
+            uploadedImages = [];
             document.getElementById('form-date').valueAsDate = new Date();
+            document.querySelector('#view-form h2').innerText = 'Tambah Proyek Baru';
             updateImagePreviewUI();
         };
 
