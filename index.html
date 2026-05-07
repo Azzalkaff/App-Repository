@@ -375,6 +375,15 @@
         let currentView = 'view-home';
         let allProjects = [];
         let activeTagFilter = 'All';
+
+        // Debounce function untuk optimasi pencarian
+        const debounce = (func, delay) => {
+            let timeout;
+            return (...args) => {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), delay);
+            };
+        };
         let currentProjectId = null;
 
         const switchView = (viewId) => {
@@ -621,7 +630,8 @@
             renderTagsFilter();
         };
 
-        document.getElementById('search-input').addEventListener('input', () => renderProjects());
+        // Hanya render setelah user berhenti mengetik selama 300ms
+        document.getElementById('search-input').addEventListener('input', debounce(() => renderProjects(), 300));
 
         const renderProjects = () => {
             const container = document.getElementById('projects-grid');
@@ -653,7 +663,7 @@
                 return `
                 <div onclick="openDetail('${p.id}')" class="material-card bg-surface rounded-xl overflow-hidden border border-gray-200 cursor-pointer flex flex-col h-full">
                     <div class="h-48 w-full bg-gray-100 relative overflow-hidden">
-                        <img src="${p.image}" alt="${p.title}" class="w-full h-full object-cover">
+                        <img src="${p.image}" alt="${p.title}" class="w-full h-full object-cover" loading="lazy">
                     </div>
                     <div class="p-5 flex flex-col flex-grow">
                         <div class="flex gap-1.5 flex-wrap mb-3 items-center">
@@ -674,10 +684,21 @@
         };
 
         const loadAndRenderProjects = async () => {
-            allProjects = await getProjects();
-            renderTagsFilter();
-            renderProjects();
+            // Optimasi: Gunakan try-catch untuk menangani kegagalan IndexedDB
+            try {
+                allProjects = await getProjects();
+                renderTagsFilter();
+                renderProjects();
+            } catch (err) {
+                console.error("Failed to load projects:", err);
+                showToast("Gagal memuat data", "error", "bg-red-500");
+            }
         };
+
+        // Garbage Collection Hint: Kosongkan cache URL jika ada untuk membebaskan RAM
+        window.addEventListener('beforeunload', () => {
+            allProjects = []; 
+        });
 
         // --- Detail View ---
         window.openDetail = (id) => {
