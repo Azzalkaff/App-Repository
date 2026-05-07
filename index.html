@@ -261,7 +261,16 @@
                 <!-- Cover Image -->
 <div class="w-full relative bg-gray-900 group">
                     <div id="detail-carousel" class="flex overflow-x-auto snap-x snap-mandatory scroll-smooth hide-scrollbar h-64 sm:h-96">
-                        </div>
+                    </div>
+
+                    <div id="detail-nav-arrows" class="hidden">
+                        <button onclick="scrollDetail(event, -1)" class="absolute left-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/60 text-white rounded-full w-12 h-12 flex items-center justify-center transition z-20 backdrop-blur-sm shadow-lg">
+                            <span class="material-icons-round text-3xl">chevron_left</span>
+                        </button>
+                        <button onclick="scrollDetail(event, 1)" class="absolute right-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/60 text-white rounded-full w-12 h-12 flex items-center justify-center transition z-20 backdrop-blur-sm shadow-lg">
+                            <span class="material-icons-round text-3xl">chevron_right</span>
+                        </button>
+                    </div>
                     
                     <div class="absolute bottom-0 left-0 p-6 sm:p-8 w-full bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white pointer-events-none">
                         <div class="flex flex-wrap gap-2 mb-3 items-center pointer-events-auto">
@@ -316,7 +325,8 @@
                 request.onupgradeneeded = (e) => {
                     db = e.target.result;
                     if (!db.objectStoreNames.contains(STORE_NAME)) {
-                        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                        store.createIndex('createdAt', 'createdAt', { unique: false });
                     }
                 };
                 request.onsuccess = (e) => {
@@ -341,8 +351,29 @@
             return new Promise((resolve, reject) => {
                 const tx = db.transaction(STORE_NAME, 'readonly');
                 const store = tx.objectStore(STORE_NAME);
-                const request = store.getAll();
-                request.onsuccess = () => resolve(request.result.sort((a,b) => b.createdAt - a.createdAt));
+                const results = [];
+                
+                // Fallback untuk user lama yang object store-nya belum memiliki Index
+                if (!store.indexNames.contains('createdAt')) {
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result.sort((a,b) => b.createdAt - a.createdAt));
+                    request.onerror = () => reject(request.error);
+                    return;
+                }
+                
+                // Bottleneck Fix: Gunakan DB Index untuk sorting Native & Cursor untuk streaming data
+                const index = store.index('createdAt');
+                const request = index.openCursor(null, 'prev');
+                
+                request.onsuccess = (e) => {
+                    const cursor = e.target.result;
+                    if (cursor) {
+                        results.push(cursor.value);
+                        cursor.continue();
+                    } else {
+                        resolve(results);
+                    }
+                };
                 request.onerror = () => reject(request.error);
             });
         };
@@ -661,8 +692,25 @@
 
                 return `
                 <div onclick="openDetail('${p.id}')" class="material-card bg-surface rounded-xl overflow-hidden border border-gray-200 cursor-pointer flex flex-col h-full">
-                    <div class="h-48 w-full bg-gray-100 relative overflow-hidden">
-                        <img src="${p.image}" alt="${p.title}" class="w-full h-full object-cover" loading="lazy">
+                    <div class="h-48 w-full bg-gray-100 relative group overflow-hidden">
+                        <div id="carousel-${p.id}" class="flex w-full h-full overflow-x-auto snap-x snap-mandatory scroll-smooth hide-scrollbar pointer-events-auto" style="scrollbar-width: none; -ms-overflow-style: none;">
+                            ${(p.images && p.images.length > 0) 
+                                ? p.images.map(img => `<img src="${img}" alt="${p.title}" class="w-full h-full object-cover flex-shrink-0 snap-center" loading="lazy" decoding="async">`).join('')
+                                : `<img src="${p.image}" alt="${p.title}" class="w-full h-full object-cover flex-shrink-0 snap-center" loading="lazy" decoding="async">`
+                            }
+                        </div>
+                        
+                        ${(p.images && p.images.length > 1) ? `
+                            <button onclick="scrollGallery(event, '${p.id}', -1)" class="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/70 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition z-10 shadow-md">
+                                <span class="material-icons-round text-[18px]">chevron_left</span>
+                            </button>
+                            <button onclick="scrollGallery(event, '${p.id}', 1)" class="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/70 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition z-10 shadow-md">
+                                <span class="material-icons-round text-[18px]">chevron_right</span>
+                            </button>
+                            <div class="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded-md z-10 flex items-center shadow-sm pointer-events-none">
+                                <span class="material-icons-round text-[12px] mr-1">photo_library</span> ${p.images.length}
+                            </div>
+                        ` : ''}
                     </div>
                     <div class="p-5 flex flex-col flex-grow">
                         <div class="flex gap-1.5 flex-wrap mb-3 items-center">
@@ -672,14 +720,29 @@
                         <div class="text-xs text-gray-500 mb-3 flex items-center">
                             <span class="material-icons-round text-[14px] mr-1">calendar_today</span> ${dateStr}
                         </div>
-                        <p class="text-sm text-gray-600 line-clamp-3 mb-4 flex-grow">${p.desc || 'Tidak ada deskripsi.'}</p>
-                        <div class="mt-auto pt-3 border-t border-gray-100 flex items-center text-primary text-sm font-medium">
-                            <span class="material-icons-round text-[18px] mr-1">visibility</span> Lihat Detail
+                        <div class="text-sm text-gray-600 line-clamp-3 mb-4 flex-grow leading-relaxed [&_p]:inline [&_h1]:text-base [&_h2]:text-base [&_h3]:text-base [&_h1]:font-bold [&_h2]:font-bold [&_h3]:font-bold [&_strong]:font-bold [&_code]:bg-gray-100 dark:[&_code]:bg-gray-800 [&_code]:px-1 [&_code]:rounded [&_code]:text-xs">
+                            ${marked.parse(p.desc || '_Tidak ada deskripsi._')}
+                        </div>
+                        <div class="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between">
+                            <div class="flex items-center text-primary text-sm font-medium">
+                                <span class="material-icons-round text-[18px] mr-1">visibility</span> Detail
+                            </div>
+                            ${p.demoUrl ? `<a href="${p.demoUrl}" target="_blank" onclick="event.stopPropagation()" title="Buka Aplikasi" class="flex items-center bg-primary text-white px-3 py-1.5 rounded-md text-xs font-medium hover:bg-primaryHover transition"><span class="material-icons-round text-[14px] mr-1">open_in_new</span> Buka App</a>` : ''}
                         </div>
                     </div>
                 </div>
                 `;
             }).join('');
+        };
+
+        // Fungsi untuk menggeser gambar carousel pada card galeri
+        window.scrollGallery = (event, id, direction) => {
+            event.stopPropagation(); // Mencegah klik masuk ke halaman detail
+            const carousel = document.getElementById(`carousel-${id}`);
+            if (carousel) {
+                const scrollAmount = carousel.clientWidth; // Geser tepat sejauh 1 gambar
+                carousel.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
+            }
         };
 
         const loadAndRenderProjects = async () => {
@@ -700,6 +763,16 @@
         });
 
         // --- Detail View ---
+        // Fungsi untuk menggeser carousel di halaman detail
+        window.scrollDetail = (event, direction) => {
+            event.stopPropagation();
+            const carousel = document.getElementById('detail-carousel');
+            if (carousel) {
+                const scrollAmount = carousel.clientWidth;
+                carousel.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
+            }
+        };
+
         window.openDetail = (id) => {
             const p = allProjects.find(x => x.id === id);
             if(!p) return;
@@ -709,8 +782,16 @@
             const carousel = document.getElementById('detail-carousel');
             const imagesToRender = p.images && p.images.length > 0 ? p.images : [p.image];
             carousel.innerHTML = imagesToRender.map(img => `
-                <img src="${img}" class="w-full h-full object-cover flex-shrink-0 snap-center">
+                <img src="${img}" class="w-full h-full object-cover flex-shrink-0 snap-center" decoding="async">
             `).join('');
+            
+            // Tampilkan/Sembunyikan Navigasi Arrow berdasarkan jumlah gambar
+            const navArrows = document.getElementById('detail-nav-arrows');
+            if (imagesToRender.length > 1) {
+                navArrows.classList.remove('hidden');
+            } else {
+                navArrows.classList.add('hidden');
+            }
             
             // Status Badge Logic
             const statusBadge = document.getElementById('detail-status-badge');
